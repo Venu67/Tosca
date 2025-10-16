@@ -1,0 +1,85 @@
+name: ERA Tosca Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      event:
+        description: 'Event to execute'
+        required: true
+        default: '3a18efd4-e24b-3c7c-ad06-e985abaf6dbb'
+
+jobs:
+  run-tosca-tests:
+    runs-on:
+      - self-hosted
+      - Windows
+      - svt-aims
+    env:
+      TOSCA_PROJECT_NAME: MCK_TOSCA
+      TOSCA_SERVER_URL: https://tosca.mckesson.com:443
+      TOSCA_CLIENT_ID: ${{ secrets.TOSCA_CLIENT_ID }}
+      TOSCA_CLIENT_SECRET: ${{ secrets.TOSCA_CLIENT_SECRET }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Checkout ToscaExecutionClient
+        uses: actions/checkout@v3
+        with:
+          repository: Tricentis/ToscaExecutionClient
+          path: ToscaExecutionClient
+
+      - name: Set up PowerShell Execution Policy
+        run: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+
+      - name: Debug Environment Variables
+        run: |
+          echo "TOSCA_PROJECT_NAME: ${{ env.TOSCA_PROJECT_NAME }}"
+          echo "TOSCA_SERVER_URL: ${{ env.TOSCA_SERVER_URL }}"
+          echo "TOSCA_CLIENT_ID: ${{ env.TOSCA_CLIENT_ID }}"
+          echo "TOSCA_CLIENT_SECRET: ${{ env.TOSCA_CLIENT_SECRET }}"
+        shell: powershell
+
+      - name: Debug Input Data
+        run: |
+          echo "TOSCA_SERVER_URL: ${{ env.TOSCA_SERVER_URL }}"
+          echo "TOSCA_PROJECT_NAME: ${{ env.TOSCA_PROJECT_NAME }}"
+        shell: powershell
+
+      - name: Run Tosca Execution Client
+        run: |
+          .\ToscaExecutionClient\tosca_execution_client.ps1 `
+            -toscaServerUrl "${{ env.TOSCA_SERVER_URL }}" `
+            -projectName "${{ env.TOSCA_PROJECT_NAME }}" `
+            -events '["${{ inputs.event }}"]' `
+            -clientId "${{ env.TOSCA_CLIENT_ID }}" `
+            -clientSecret "${{ env.TOSCA_CLIENT_SECRET }}" `
+            -resultsFolderPath "results" `
+            -resultsFileName "TestResults.xml" `
+            -importResults "true"
+        shell: powershell
+        env:
+          TOSCA_PROJECT_NAME: MCK_TOSCA
+          TOSCA_SERVER_URL: https://tosca.mckesson.com:443
+          TOSCA_CLIENT_ID: ${{ secrets.TOSCA_CLIENT_ID }}
+          TOSCA_CLIENT_SECRET: ${{ secrets.TOSCA_CLIENT_SECRET }}
+
+      - name: Print Directory Tree (PowerShell)
+        run: Get-ChildItem -Path . -Recurse | Format-Table FullName
+        shell: powershell
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tosca-Test-Results
+          path: ToscaExecutionClient/results/TestResults.xml
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        with:
+          name: Tosca Tests
+          path: ToscaExecutionClient/results/TestResults.xml
+          reporter: java-junit

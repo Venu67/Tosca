@@ -1,8 +1,7 @@
 name: ERA Tosca Integration
 
 on:
-  workflow_dispatch:
-    inputs:
+     inputs:
       event:
         description: 'Event to execute'
         required: true

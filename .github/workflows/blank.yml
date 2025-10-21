@@ -13,7 +13,8 @@ jobs:
     runs-on:
       - self-hosted
       - Windows
-      - svt-aims
+      - X64
+      - Tosca
     env:
       TOSCA_PROJECT_NAME: MCK_TOSCA
       TOSCA_SERVER_URL: https://tosca.mckesson.com:443
